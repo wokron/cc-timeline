@@ -7,15 +7,36 @@ use std::time::SystemTime;
 
 use clap::CommandFactory;
 use clap::Parser;
+use clap::Subcommand;
 
-#[derive(Parser)]
-struct Cli {
-    /// Activate debug mode
-    #[clap(short, long)]
-    debug: bool,
+#[derive(clap::Args)]
+struct TraceArgs {
+    #[clap(short, long, default_value = "trace.txt")]
+    output: String,
 
     #[clap(last = true)]
     cmd_args: Vec<String>,
+}
+
+#[derive(clap::Args)]
+struct ConvertArgs {
+    #[clap(short, long, default_value = "trace.txt")]
+    input: String,
+
+    #[clap(short, long, default_value = "trace.json")]
+    output: String,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    Trace(TraceArgs),
+    Convert(ConvertArgs),
+}
+
+#[derive(Parser)]
+struct Cli {
+    #[clap(subcommand)]
+    command: Commands,
 }
 
 fn exec_with_measure(
@@ -45,15 +66,7 @@ impl TimeFormatter for NanoTsTimeFormatter {
     }
 }
 
-fn main() {
-    let args = Cli::parse();
-
-    if args.debug {
-        println!("Debug mode is on");
-    } else {
-        println!("Debug mode is off");
-    }
-
+fn do_trace(args: &TraceArgs) {
     if args.cmd_args.is_empty() {
         eprintln!("No additional arguments provided.");
         Cli::command().print_help().unwrap();
@@ -71,9 +84,22 @@ fn main() {
     }
     let time_formatter = NanoTsTimeFormatter;
     let mut event_logger =
-        EventLogger::new("events.log", &time_formatter).expect("Failed to create event logger");
+        EventLogger::new(&args.output, &time_formatter).expect("Failed to create event logger");
     let cmd_args_str = args.cmd_args.join(" ");
     event_logger
         .log_event(start, duration, cmd_args_str.as_str())
         .expect("Failed to log event");
+}
+
+fn do_convert(args: &ConvertArgs) {
+    eprintln!("Converting from {} to {}", args.input, args.output);
+}
+
+fn main() {
+    let args = Cli::parse();
+
+    match &args.command {
+        Commands::Trace(trace_args) => do_trace(trace_args),
+        Commands::Convert(convert_args) => do_convert(convert_args),
+    }
 }
