@@ -15,8 +15,9 @@ impl TraceRecorder {
     }
 
     fn record(&mut self, data: &str) -> anyhow::Result<()> {
+        self.file.lock()?;
         writeln!(self.file, "{}", data)?;
-        self.file.flush()?;
+        self.file.unlock()?;
         Ok(())
     }
 
