@@ -2,7 +2,11 @@ mod chrome_trace;
 mod trace;
 mod trace_event;
 
+use crate::chrome_trace::ChromeTraceSaver;
+use crate::trace::TraceLoader;
 use crate::trace::TraceRecorder;
+use crate::trace_event::TraceEvent;
+
 use std::path::Path;
 use std::process::ExitStatus;
 use std::time::Duration;
@@ -91,7 +95,7 @@ fn do_trace(args: &TraceArgs) {
     if !status.success() {
         std::process::exit(status.code().unwrap_or(1));
     }
-    let event = trace_event::TraceEvent::from(pid, start, duration, args.cmd_args.clone()).unwrap();
+    let event = TraceEvent::from(pid, start, duration, args.cmd_args.clone()).unwrap();
     let mut recorder =
         TraceRecorder::new(Path::new(&args.output)).expect("Failed to create trace recorder");
     recorder
@@ -101,11 +105,10 @@ fn do_trace(args: &TraceArgs) {
 
 fn do_convert(args: &ConvertArgs) {
     let mut loader =
-        trace::TraceLoader::new(Path::new(&args.input)).expect("Failed to create trace loader");
-    let mut saver = chrome_trace::ChromeTraceSaver::new(Path::new(&args.output))
-        .expect("Failed to create saver");
+        TraceLoader::new(Path::new(&args.input)).expect("Failed to create trace loader");
+    let mut saver = ChromeTraceSaver::new(Path::new(&args.output)).expect("Failed to create saver");
     loader
-        .load_events(|event: trace_event::TraceEvent| saver.accept_trace_event(event))
+        .load_events(|event: TraceEvent| saver.accept_trace_event(event))
         .expect("Failed to load trace events");
 
     saver.save().expect("Failed to save Chrome trace file");
