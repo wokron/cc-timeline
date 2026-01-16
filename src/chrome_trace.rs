@@ -50,7 +50,7 @@ impl ChromeTraceSaver {
         let ph = "X".to_string();
         let ts_us = event.timestamp_ns / 1000;
         let dur_us = event.duration_ns / 1000;
-        let pid = 0;
+        let pid = event.pid;
         let chrome_event = ChromeTraceEvent::new(name, cat, ph, ts_us, dur_us, pid);
         self.add_event(chrome_event);
     }

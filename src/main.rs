@@ -62,12 +62,17 @@ struct Cli {
 fn exec_with_measure(
     program: &str,
     args: &[&String],
-) -> anyhow::Result<(ExitStatus, SystemTime, Duration)> {
+) -> anyhow::Result<(u32, ExitStatus, SystemTime, Duration)> {
     let start = std::time::SystemTime::now();
-    let status = std::process::Command::new(program).args(args).status()?;
+    let mut child = std::process::Command::new(program)
+        .args(args)
+        .spawn()
+        .expect("Failed to spawn command");
+    let pid = child.id();
+    let status = child.wait()?;
     let end = std::time::SystemTime::now();
     let duration = end.duration_since(start)?;
-    Ok((status, start, duration))
+    Ok((pid, status, start, duration))
 }
 
 fn do_trace(args: &TraceArgs) {
@@ -81,12 +86,12 @@ fn do_trace(args: &TraceArgs) {
     let program: &String = cmd_iter.next().unwrap(); // Safe
     let program_args: Vec<&String> = cmd_iter.collect();
 
-    let (status, start, duration) =
+    let (pid, status, start, duration) =
         exec_with_measure(program, &program_args).expect("Failed to execute the command");
     if !status.success() {
         std::process::exit(status.code().unwrap_or(1));
     }
-    let event = trace_event::TraceEvent::from(start, duration, args.cmd_args.clone()).unwrap();
+    let event = trace_event::TraceEvent::from(pid, start, duration, args.cmd_args.clone()).unwrap();
     let mut recorder =
         TraceRecorder::new(Path::new(&args.output)).expect("Failed to create trace recorder");
     recorder
