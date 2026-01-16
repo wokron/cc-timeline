@@ -9,18 +9,18 @@ struct ChromeTraceEvent {
     ph: String,
     ts: u64,
     dur: u64,
-    pid: u32,
+    tid: u32,
 }
 
 impl ChromeTraceEvent {
-    pub fn new(name: String, cat: String, ph: String, ts: u64, dur: u64, pid: u32) -> Self {
+    pub fn new(name: String, cat: String, ph: String, ts: u64, dur: u64, tid: u32) -> Self {
         ChromeTraceEvent {
             name,
             cat,
             ph,
             ts,
             dur,
-            pid,
+            tid,
         }
     }
 }
@@ -50,8 +50,9 @@ impl ChromeTraceSaver {
         let ph = "X".to_string();
         let ts_us = event.timestamp_ns / 1000;
         let dur_us = event.duration_ns / 1000;
-        let pid = event.pid;
-        let chrome_event = ChromeTraceEvent::new(name, cat, ph, ts_us, dur_us, pid);
+        // Use pid as tid for better visualization grouping
+        let tid = event.pid;
+        let chrome_event = ChromeTraceEvent::new(name, cat, ph, ts_us, dur_us, tid);
         self.add_event(chrome_event);
     }
 
