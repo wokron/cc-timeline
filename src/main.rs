@@ -14,25 +14,42 @@ use clap::Subcommand;
 
 #[derive(clap::Args)]
 struct TraceArgs {
-    #[clap(short, long, default_value = "trace.ndjson")]
+    #[clap(
+        short,
+        long,
+        default_value = "trace.ndjson",
+        help = "Output trace file path"
+    )]
     output: String,
 
-    #[clap(last = true)]
+    #[clap(last = true, help = "Command and arguments to trace")]
     cmd_args: Vec<String>,
 }
 
 #[derive(clap::Args)]
 struct ConvertArgs {
-    #[clap(short, long, default_value = "trace.ndjson")]
+    #[clap(
+        short,
+        long,
+        default_value = "trace.ndjson",
+        help = "Input trace file path"
+    )]
     input: String,
 
-    #[clap(short, long, default_value = "chrome_trace.json")]
+    #[clap(
+        short,
+        long,
+        default_value = "chrome_trace.json",
+        help = "Output Chrome trace file path"
+    )]
     output: String,
 }
 
 #[derive(Subcommand)]
 enum Commands {
+    #[clap(about = "Trace a command and record its execution time")]
     Trace(TraceArgs),
+    #[clap(about = "Convert a trace file to Chrome trace format")]
     Convert(ConvertArgs),
 }
 
