@@ -5,9 +5,9 @@ use serde_json::Result;
 
 #[derive(Serialize, Deserialize)]
 pub struct TraceEvent {
-    timestamp_ns: u64,
-    duration_ns: u64,
-    cmds: Vec<String>,
+    pub timestamp_ns: u64,
+    pub duration_ns: u64,
+    pub cmds: Vec<String>,
 }
 
 impl TraceEvent {

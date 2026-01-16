@@ -1,3 +1,4 @@
+mod chrome_trace;
 mod trace;
 mod trace_event;
 
@@ -77,7 +78,15 @@ fn do_trace(args: &TraceArgs) {
 }
 
 fn do_convert(args: &ConvertArgs) {
-    eprintln!("Converting from {} to {}", args.input, args.output);
+    let mut loader =
+        trace::TraceLoader::new(Path::new(&args.input)).expect("Failed to create trace loader");
+    let mut saver = chrome_trace::ChromeTraceSaver::new(Path::new(&args.output))
+        .expect("Failed to create saver");
+    loader
+        .load_events(|event: trace_event::TraceEvent| saver.accept_trace_event(event))
+        .expect("Failed to load trace events");
+
+    saver.save().expect("Failed to save Chrome trace file");
 }
 
 fn main() {
