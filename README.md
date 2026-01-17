@@ -2,6 +2,8 @@
 
 **cc-timeline** is a tool for tracing, analyzing, and visualizing the execution timeline of command-line programs (such as build commands). It supports converting trace data to Chrome Trace format for browser-based visualization, and provides advanced features like thread reduction and dependency analysis.
 
+![demo](./demo/demo.png)
+
 ## Features
 
 - Trace the execution time and arguments of any command
@@ -11,8 +13,6 @@
 - Output compatible with Chrome Trace Viewer (JSON format)
 
 ## Installation
-
-Requires Rust 1.59+.
 
 ```sh
 git clone https://github.com/yourname/cc-timeline.git
