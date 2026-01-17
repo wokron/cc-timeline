@@ -58,20 +58,27 @@ struct ConvertArgs {
         long,
         default_missing_value = "0",
         num_args=0..=1,
-        help = "Compact Timeline by reassigning thread IDs"
+        help = "Compact Timeline by reassigning thread IDs [default: number of hardware threads]"
     )]
     compact: Option<u32>,
 }
 
 #[derive(Subcommand)]
 enum Commands {
-    #[clap(about = "Trace a command and record its execution time")]
+    #[clap(about = "Trace a command and record its execution time, \
+        e.g., cc-timeline trace -- gcc -c file.c -o file.o")]
     Trace(TraceArgs),
     #[clap(about = "Convert a trace file to Chrome trace format")]
     Convert(ConvertArgs),
 }
 
 #[derive(Parser)]
+#[clap(
+    name = "cc-timeline",
+    version,
+    about = "A tool to trace execution times of compile commands \
+    and visualize them in Chrome Trace format"
+)]
 struct Cli {
     #[clap(subcommand)]
     command: Commands,
