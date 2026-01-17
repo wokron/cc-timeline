@@ -174,7 +174,14 @@ fn do_convert(args: &ConvertArgs) {
         dep_manager.iterate_dependencies(|parent, child| {
             let from_ns = parent.timestamp_ns + parent.duration_ns;
             let to_ns = child.timestamp_ns;
-            saver.accept_flow_event(from_ns, to_ns, parent.pid, child.pid, flow_id);
+            saver.accept_flow_event(
+                parent.name.clone(),
+                from_ns,
+                to_ns,
+                parent.pid,
+                child.pid,
+                flow_id,
+            );
             flow_id += 1;
         });
     }

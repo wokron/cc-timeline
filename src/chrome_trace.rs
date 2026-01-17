@@ -59,10 +59,18 @@ impl ChromeTraceSaver {
         self.add_event(chrome_event);
     }
 
-    pub fn accept_flow_event(&mut self, from_ns: u64, to_ns: u64, pid1: u32, pid2: u32, id: u64) {
+    pub fn accept_flow_event(
+        &mut self,
+        cat: String,
+        from_ns: u64,
+        to_ns: u64,
+        pid1: u32,
+        pid2: u32,
+        id: u64,
+    ) {
         let start_event = ChromeTraceEvent {
             name: "flow".to_string(),
-            cat: "dependency".to_string(),
+            cat: cat.clone(),
             ph: "s".to_string(),
             ts: from_ns / 1000,
             pid: 0,
@@ -73,7 +81,7 @@ impl ChromeTraceSaver {
         };
         let end_event = ChromeTraceEvent {
             name: "flow".to_string(),
-            cat: "dependency".to_string(),
+            cat,
             ph: "f".to_string(),
             ts: to_ns / 1000,
             pid: 0,
