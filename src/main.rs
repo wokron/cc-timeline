@@ -1,9 +1,11 @@
 mod chrome_trace;
 mod dependency;
+mod thread_placer;
 mod trace;
 mod trace_event;
 
 use crate::chrome_trace::ChromeTraceSaver;
+use crate::thread_placer::ThreadPlacer;
 use crate::trace::TraceLoader;
 use crate::trace::TraceRecorder;
 use crate::trace_event::TraceEvent;
@@ -49,8 +51,16 @@ struct ConvertArgs {
     )]
     output: String,
 
-    #[clap(short, long, help = "Generate flow events")]
+    #[clap(long, help = "Generate flow events")]
     flow: bool,
+
+    #[clap(
+        long,
+        default_missing_value = "0",
+        num_args=0..=1,
+        help = "Compact Timeline by reassigning thread IDs"
+    )]
+    compact: Option<u32>,
 }
 
 #[derive(Subcommand)]
@@ -107,19 +117,47 @@ fn do_trace(args: &TraceArgs) {
         .expect("Failed to record trace event");
 }
 
+fn preprocess_trace_event(thread_placer: Option<&mut ThreadPlacer>, event: &mut TraceEvent) {
+    match thread_placer {
+        Some(tp) => {
+            let new_tid = tp.place_thread(event.pid, event.timestamp_ns, event.duration_ns);
+            event.pid = new_tid;
+        }
+        None => {}
+    }
+}
+
 fn do_convert(args: &ConvertArgs) {
     let mut loader =
         TraceLoader::new(Path::new(&args.input)).expect("Failed to create trace loader");
 
-    let mut saver = ChromeTraceSaver::new(Path::new(&args.output)).expect("Failed to create saver");
+    let mut thread_placer: Option<ThreadPlacer> = None;
+    if let Some(compact_level) = args.compact {
+        let level = if compact_level == 0 {
+            // Get hardware concurrency
+            std::thread::available_parallelism()
+                .map(|n| n.get() as u32)
+                .unwrap_or(64)
+        } else {
+            compact_level
+        };
+        thread_placer = Some(ThreadPlacer::new(level as usize));
+    }
+
+    let mut saver: ChromeTraceSaver =
+        ChromeTraceSaver::new(Path::new(&args.output)).expect("Failed to create saver");
     if !args.flow {
         loader
-            .load_events(|event: TraceEvent| saver.accept_trace_event(event))
+            .load_events(|mut event: TraceEvent| {
+                preprocess_trace_event(thread_placer.as_mut(), &mut event);
+                saver.accept_trace_event(event)
+            })
             .expect("Failed to load trace events");
     } else {
         let mut dep_manager = dependency::DependencyManager::new();
         loader
-            .load_events(|event: TraceEvent| {
+            .load_events(|mut event: TraceEvent| {
+                preprocess_trace_event(thread_placer.as_mut(), &mut event);
                 saver.accept_trace_event(event.clone());
                 dep_manager.add_event(event);
             })

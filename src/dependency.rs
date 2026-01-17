@@ -71,7 +71,6 @@ impl DependencyManager {
     }
 }
 
-// tests
 #[cfg(test)]
 mod tests {
     use super::*;
