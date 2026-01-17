@@ -8,21 +8,14 @@ struct ChromeTraceEvent {
     cat: String,
     ph: String,
     ts: u64,
-    dur: u64,
+    pid: u32,
     tid: u32,
-}
-
-impl ChromeTraceEvent {
-    pub fn new(name: String, cat: String, ph: String, ts: u64, dur: u64, tid: u32) -> Self {
-        ChromeTraceEvent {
-            name,
-            cat,
-            ph,
-            ts,
-            dur,
-            tid,
-        }
-    }
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dur: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    id: Option<String>,
 }
 
 pub struct ChromeTraceSaver {
@@ -52,8 +45,45 @@ impl ChromeTraceSaver {
         let dur_us = event.duration_ns / 1000;
         // Use pid as tid for better visualization grouping
         let tid = event.pid;
-        let chrome_event = ChromeTraceEvent::new(name, cat, ph, ts_us, dur_us, tid);
+        let chrome_event = ChromeTraceEvent {
+            name,
+            cat,
+            ph,
+            ts: ts_us,
+            pid: 0,
+            tid,
+            dur: Some(dur_us),
+            bp: None,
+            id: None,
+        };
         self.add_event(chrome_event);
+    }
+
+    pub fn accept_flow_event(&mut self, from_ns: u64, to_ns: u64, pid1: u32, pid2: u32, id: u64) {
+        let start_event = ChromeTraceEvent {
+            name: "flow".to_string(),
+            cat: "dependency".to_string(),
+            ph: "s".to_string(),
+            ts: from_ns / 1000,
+            pid: 0,
+            tid: pid1,
+            dur: None,
+            id: Some(format!("{}", id)),
+            bp: Some("e".to_string()),
+        };
+        let end_event = ChromeTraceEvent {
+            name: "flow".to_string(),
+            cat: "dependency".to_string(),
+            ph: "f".to_string(),
+            ts: to_ns / 1000,
+            pid: 0,
+            tid: pid2,
+            dur: None,
+            id: Some(format!("{}", id)),
+            bp: Some("e".to_string()),
+        };
+        self.add_event(start_event);
+        self.add_event(end_event);
     }
 
     pub fn save(&mut self) -> anyhow::Result<()> {

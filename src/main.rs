@@ -1,4 +1,5 @@
 mod chrome_trace;
+mod dependency;
 mod trace;
 mod trace_event;
 
@@ -47,6 +48,9 @@ struct ConvertArgs {
         help = "Output Chrome trace file path"
     )]
     output: String,
+
+    #[clap(short, long, help = "Generate flow events")]
+    flow: bool,
 }
 
 #[derive(Subcommand)]
@@ -106,10 +110,29 @@ fn do_trace(args: &TraceArgs) {
 fn do_convert(args: &ConvertArgs) {
     let mut loader =
         TraceLoader::new(Path::new(&args.input)).expect("Failed to create trace loader");
+
     let mut saver = ChromeTraceSaver::new(Path::new(&args.output)).expect("Failed to create saver");
-    loader
-        .load_events(|event: TraceEvent| saver.accept_trace_event(event))
-        .expect("Failed to load trace events");
+    if !args.flow {
+        loader
+            .load_events(|event: TraceEvent| saver.accept_trace_event(event))
+            .expect("Failed to load trace events");
+    } else {
+        let mut dep_manager = dependency::DependencyManager::new();
+        loader
+            .load_events(|event: TraceEvent| {
+                saver.accept_trace_event(event.clone());
+                dep_manager.add_event(event);
+            })
+            .expect("Failed to load trace events");
+
+        let mut flow_id: u64 = 0;
+        dep_manager.iterate_dependencies(|parent, child| {
+            let from_ns = parent.timestamp_ns + parent.duration_ns;
+            let to_ns = child.timestamp_ns;
+            saver.accept_flow_event(from_ns, to_ns, parent.pid, child.pid, flow_id);
+            flow_id += 1;
+        });
+    }
 
     saver.save().expect("Failed to save Chrome trace file");
 }
