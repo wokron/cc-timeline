@@ -1,5 +1,7 @@
 use crate::trace_event::TraceEvent;
 
+use std::path::Path;
+
 pub struct DependencyNode {
     pub name: String,
     pub pid: u32,
@@ -19,10 +21,12 @@ impl DependencyNode {
             let is_option = cmd[i].starts_with('-');
             if !prev_is_option && !is_option {
                 // an input file
-                dependencies.push(cmd[i].clone());
+                let path = Path::new(event.cwd.as_str()).join(&cmd[i]);
+                dependencies.push(path.to_string_lossy().to_string());
             } else if is_option && cmd[i] == "-o" {
                 // output file
-                name = cmd[i + 1].clone();
+                let path = Path::new(event.cwd.as_str()).join(&cmd[i + 1]);
+                name = path.to_string_lossy().to_string();
             }
             prev_is_option = is_option;
             i = i + 1;
@@ -85,15 +89,19 @@ mod tests {
             timestamp_ns: 1000000,
             duration_ns: 500000,
             cmds: cmds,
+            cwd: "/home/user/project".to_string(),
         };
         let dep_node = DependencyNode::from_trace_event(event);
-        assert_eq!(dep_node.name, "sq-full-cpp.t".to_string());
+        assert_eq!(dep_node.name, "/home/user/project/sq-full-cpp.t".to_string());
         assert_eq!(dep_node.pid, 1234);
         assert_eq!(dep_node.timestamp_ns, 1000000);
         assert_eq!(dep_node.duration_ns, 500000);
         assert_eq!(
             dep_node.dependencies,
-            vec!["sq-full-cpp.cc".to_string(), "helpers.o".to_string()]
+            vec![
+                "/home/user/project/sq-full-cpp.cc".to_string(),
+                "/home/user/project/helpers.o".to_string()
+            ]
         );
     }
 }

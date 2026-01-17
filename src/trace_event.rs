@@ -9,15 +9,23 @@ pub struct TraceEvent {
     pub timestamp_ns: u64,
     pub duration_ns: u64,
     pub cmds: Vec<String>,
+    pub cwd: String,
 }
 
 impl TraceEvent {
-    pub fn new(pid: u32, timestamp_ns: u64, duration_ns: u64, cmds: Vec<String>) -> Self {
+    pub fn new(
+        pid: u32,
+        timestamp_ns: u64,
+        duration_ns: u64,
+        cmds: Vec<String>,
+        cwd: String,
+    ) -> Self {
         TraceEvent {
             pid,
             timestamp_ns,
             duration_ns,
             cmds,
+            cwd,
         }
     }
 
@@ -30,7 +38,8 @@ impl TraceEvent {
         let epoch = start.duration_since(SystemTime::UNIX_EPOCH)?;
         let timestamp_ns = epoch.as_secs() * 1_000_000_000 + epoch.subsec_nanos() as u64;
         let duration_ns = duration.as_secs() * 1_000_000_000 + duration.subsec_nanos() as u64;
-        Ok(TraceEvent::new(pid, timestamp_ns, duration_ns, cmds))
+        let cwd = std::env::current_dir()?.to_string_lossy().to_string();
+        Ok(TraceEvent::new(pid, timestamp_ns, duration_ns, cmds, cwd))
     }
 
     pub fn to_json(&self) -> Result<String> {
